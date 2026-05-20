@@ -85,7 +85,14 @@ for coin in filtered:
         if groq_key:
             if st.button(f"🤖 Analyze {coin['symbol']}", key=f"btn_{coin['id']}"):
                 with st.spinner(f"Analyzing {coin['name']}..."):
-                    st.session_state[key] = analyze_coin(groq_key, coin)
+                    try:
+                        st.session_state[key] = analyze_coin(groq_key, coin)
+                    except Exception as e:
+                        msg = str(e)
+                        if "auth" in msg.lower() or "401" in msg:
+                            st.error("Invalid Groq API key. Update it in Streamlit Secrets → GROQ_API_KEY.")
+                        else:
+                            st.error(f"AI analysis failed: {msg}")
 
         if key in st.session_state:
             result = st.session_state[key]

@@ -205,7 +205,11 @@ else:
                 st.caption("AI reviews your reasoning and discipline — not the market. Final call is always yours.")
 
             except Exception as e:
-                st.error(f"AI error: {e}")
+                msg = str(e)
+                if "auth" in msg.lower() or "401" in msg:
+                    st.error("Invalid Groq API key. Get a new one at console.groq.com → API Keys.")
+                else:
+                    st.error(f"AI error: {msg}")
                 st.caption("Check your API key or internet connection.")
 
 st.divider()
