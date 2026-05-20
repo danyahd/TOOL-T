@@ -15,7 +15,7 @@ with st.sidebar:
         type="password",
         placeholder="gsk_...",
         help="Free at console.groq.com → API Keys",
-        value=st.session_state.get("groq_api_key", "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"),
+        value=st.session_state.get("groq_api_key", ""),
     )
     if api_key:
         st.session_state["groq_api_key"] = api_key
