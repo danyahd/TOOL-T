@@ -66,6 +66,38 @@ COACHING TIP: [One short discipline or mindset reminder]"""
     return _parse_response(raw)
 
 
+def analyze_losses(api_key: str, summary: str) -> str:
+    client = Groq(api_key=api_key)
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": "You are a trading coach who analyzes a beginner trader's journal to find patterns in their losses. Be direct, compassionate, and specific. Focus on what behaviors are costing them money."},
+            {"role": "user", "content": f"Here is a summary of my trading journal data:\n\n{summary}\n\nAnalyze my loss patterns and give me 3-5 specific, actionable lessons I should take from this data. Be honest."},
+        ],
+        temperature=0.4,
+        max_tokens=600,
+    )
+    return response.choices[0].message.content.strip()
+
+
+def tutor_chat(api_key: str, messages: list) -> str:
+    client = Groq(api_key=api_key)
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": """You are a patient, friendly trading and investing tutor for beginners.
+The student has made losses in crypto and wants to learn properly before investing again.
+Explain concepts simply, use analogies, and always mention risk management.
+Never tell them to buy a specific asset. Focus on education and discipline.
+Keep answers concise (3-5 sentences max) unless a longer explanation is clearly needed."""},
+            *messages,
+        ],
+        temperature=0.6,
+        max_tokens=400,
+    )
+    return response.choices[0].message.content.strip()
+
+
 def analyze_stock(api_key: str, ticker: str, name: str, price: float, change_pct: float, market_cap: float, volume: float) -> dict:
     """
     Returns a dict with keys: verdict, reasoning, red_flag, suggestions, coaching_tip, raw

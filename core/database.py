@@ -52,6 +52,52 @@ def save_trade(trade: dict) -> int:
     return trade_id
 
 
+def init_paper_db():
+    conn = get_connection()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS paper_trades (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            symbol TEXT NOT NULL,
+            asset_type TEXT NOT NULL,
+            action TEXT NOT NULL,
+            quantity REAL NOT NULL,
+            price REAL NOT NULL,
+            total REAL NOT NULL,
+            created_at TEXT DEFAULT (datetime('now'))
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+
+def save_paper_trade(symbol: str, asset_type: str, action: str, quantity: float, price: float):
+    init_paper_db()
+    conn = get_connection()
+    conn.execute(
+        "INSERT INTO paper_trades (symbol, asset_type, action, quantity, price, total) VALUES (?, ?, ?, ?, ?, ?)",
+        (symbol, asset_type, action, quantity, price, quantity * price)
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_paper_trades() -> list[dict]:
+    init_paper_db()
+    conn = get_connection()
+    conn.row_factory = sqlite3.Row
+    rows = conn.execute("SELECT * FROM paper_trades ORDER BY created_at ASC").fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def reset_paper_trades():
+    init_paper_db()
+    conn = get_connection()
+    conn.execute("DELETE FROM paper_trades")
+    conn.commit()
+    conn.close()
+
+
 def get_all_trades() -> list[dict]:
     conn = get_connection()
     conn.row_factory = sqlite3.Row
