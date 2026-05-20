@@ -1,9 +1,17 @@
 import streamlit as st
 from core.market_data import get_trending
+from core.ai import analyze_coin
 
 st.set_page_config(page_title="Early Alpha", page_icon="🔍", layout="wide")
 st.title("🔍 Early Alpha — Trending Coins")
 st.caption("Top trending coins on CoinGecko right now, sorted by momentum. High volume + rising price = strong market interest.")
+
+groq_key = st.session_state.get("groq_api_key", "")
+if not groq_key:
+    try:
+        groq_key = st.secrets.get("GROQ_API_KEY", "")
+    except Exception:
+        pass
 
 with st.spinner("Fetching trending data..."):
     coins = get_trending()
@@ -34,14 +42,20 @@ if not filtered:
 
 st.markdown("---")
 
+VERDICT_STYLE = {
+    "BUY":   ("🟢", "#22c55e", "Early Buy Signal"),
+    "WATCH": ("🟡", "#f59e0b", "Watch Closely"),
+    "AVOID": ("🔴", "#ef4444", "Avoid"),
+}
+
 for coin in filtered:
     change = coin["change_24h"]
     if change >= 5:
-        signal, color, badge = "Strong Momentum", "#22c55e", "🟢"
+        momentum_badge = "🟢 Strong Momentum"
     elif change >= 0:
-        signal, color, badge = "Mild Uptrend", "#f59e0b", "🟡"
+        momentum_badge = "🟡 Mild Uptrend"
     else:
-        signal, color, badge = "Declining", "#ef4444", "🔴"
+        momentum_badge = "🔴 Declining"
 
     with st.container():
         c1, c2, c3, c4, c5 = st.columns([2, 1.5, 1.5, 1.5, 1])
@@ -61,9 +75,39 @@ for coin in filtered:
             vol_fmt = f"${vol/1e9:.2f}B" if vol >= 1e9 else f"${vol/1e6:.1f}M" if vol >= 1e6 else f"${vol:,.0f}"
             st.metric("Volume", vol_fmt)
         with c5:
-            st.markdown(f"<div style='padding-top:20px;font-size:1.1em'>{badge} {signal}</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='padding-top:20px'>{momentum_badge}</div>", unsafe_allow_html=True)
 
         if coin["sparkline"]:
             st.image(coin["sparkline"], width=200)
+
+        # AI Analysis
+        key = f"analysis_{coin['id']}"
+        if groq_key:
+            if st.button(f"🤖 Analyze {coin['symbol']}", key=f"btn_{coin['id']}"):
+                with st.spinner(f"Analyzing {coin['name']}..."):
+                    st.session_state[key] = analyze_coin(groq_key, coin)
+
+        if key in st.session_state:
+            result = st.session_state[key]
+            verdict = result.get("verdict", "WATCH")
+            emoji, color, label = VERDICT_STYLE.get(verdict, ("🟡", "#f59e0b", verdict))
+
+            st.markdown(
+                f"<div style='background:#1e1e2e;border-left:4px solid {color};padding:12px 16px;border-radius:6px;margin-top:8px'>"
+                f"<strong style='color:{color};font-size:1.1em'>{emoji} {label}</strong><br><br>"
+                f"<strong>Analysis:</strong> {result.get('reasoning','')}<br><br>"
+                f"<strong>Red Flag:</strong> {result.get('red_flag','None')}<br><br>"
+                + (
+                    "<strong>Suggestions:</strong><ul>"
+                    + "".join(f"<li>{s}</li>" for s in result.get("suggestions", []))
+                    + "</ul>"
+                    if result.get("suggestions") else ""
+                )
+                + f"<strong>Tip:</strong> {result.get('coaching_tip','')}"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+        elif not groq_key:
+            st.caption("Add your Groq API key in the Checklist sidebar to enable AI analysis.")
 
         st.markdown("---")

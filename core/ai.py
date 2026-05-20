@@ -66,6 +66,63 @@ COACHING TIP: [One short discipline or mindset reminder]"""
     return _parse_response(raw)
 
 
+def analyze_coin(api_key: str, coin: dict) -> dict:
+    """
+    Returns a dict with keys: verdict, reasoning, red_flag, suggestions, coaching_tip, raw
+    verdict is one of: BUY / WATCH / AVOID
+    """
+    change = coin.get("change_24h", 0)
+    vol = coin.get("volume", 0)
+    vol_fmt = f"${vol/1e9:.2f}B" if vol >= 1e9 else f"${vol/1e6:.1f}M"
+    mcap = coin.get("market_cap", 0)
+    mcap_fmt = f"${mcap/1e9:.2f}B" if mcap >= 1e9 else f"${mcap/1e6:.1f}M"
+    rank = coin.get("rank", 9999)
+    rank_label = f"#{rank}" if rank < 9999 else "Unranked (very new)"
+    description = coin.get("description", "No description available.")
+
+    prompt = f"""Analyze this trending cryptocurrency and give an honest early investment assessment.
+
+COIN: {coin.get('name')} ({coin.get('symbol')})
+Market cap rank: {rank_label}
+Price 24h change: {change:+.2f}%
+24h Volume: {vol_fmt}
+Market cap: {mcap_fmt}
+Project description: {description}
+
+You are a crypto analyst assessing whether this coin is worth early investment attention.
+Be direct. High volume + rising price on a low-rank coin can mean early momentum.
+But also watch for pump-and-dump patterns, lack of fundamentals, or hype with no substance.
+
+Respond in EXACTLY this format, no extra text:
+
+VERDICT: [BUY or WATCH or AVOID]
+REASONING: [2-3 honest sentences about the coin's potential and risk]
+RED FLAG: [The single biggest risk or concern, or "None" if solid]
+SUGGESTIONS:
+- [Specific suggestion 1]
+- [Specific suggestion 2]
+- [Specific suggestion 3]
+COACHING TIP: [One short tip about investing in early-stage coins]"""
+
+    client = Groq(api_key=api_key)
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": "You are a crypto analyst who gives honest, risk-aware assessments of early-stage cryptocurrency investments. You never hype. You always mention risks."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.4,
+        max_tokens=350,
+    )
+
+    raw = response.choices[0].message.content.strip()
+    result = _parse_response(raw)
+    # remap TRADE→BUY, SKIP→AVOID for coin context
+    remap = {"TRADE": "BUY", "WAIT": "WATCH", "SKIP": "AVOID"}
+    result["verdict"] = remap.get(result["verdict"], result["verdict"])
+    return result
+
+
 def _parse_response(raw: str) -> dict:
     result = {
         "verdict": "WAIT",
