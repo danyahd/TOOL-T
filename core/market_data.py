@@ -5,8 +5,11 @@ COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 
 
 def _headers() -> dict:
-    key = st.secrets.get("COINGECKO_API_KEY", "")
-    return {"x-cg-demo-api-key": key} if key else {}
+    try:
+        key = st.secrets.get("COINGECKO_API_KEY", "")
+        return {"x-cg-demo-api-key": key} if key else {}
+    except Exception:
+        return {}
 
 COINS = {
     "BTC": "bitcoin",
