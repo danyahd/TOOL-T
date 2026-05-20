@@ -10,12 +10,13 @@ init_db()
 # --- API key setup (sidebar) ---
 with st.sidebar:
     st.subheader("AI Settings")
+    default_key = st.secrets.get("GROQ_API_KEY", st.session_state.get("groq_api_key", ""))
     api_key = st.text_input(
         "Groq API Key",
         type="password",
         placeholder="gsk_...",
         help="Free at console.groq.com → API Keys",
-        value=st.session_state.get("groq_api_key", ""),
+        value=default_key,
     )
     if api_key:
         st.session_state["groq_api_key"] = api_key
