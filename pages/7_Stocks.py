@@ -142,14 +142,16 @@ for name, ticker in tickers.items():
 
         if not hist.empty:
             fig = go.Figure()
-            color = "#22c55e" if q["change_pct"] >= 0 else "#ef4444"
+            is_up = q["change_pct"] >= 0
+            color = "#22c55e" if is_up else "#ef4444"
+            fill_color = "rgba(34,197,94,0.08)" if is_up else "rgba(239,68,68,0.08)"
             fig.add_trace(go.Scatter(
                 x=hist.index,
                 y=hist["Close"],
                 mode="lines",
                 line=dict(color=color, width=2),
                 fill="tozeroy",
-                fillcolor=color.replace(")", ",0.08)").replace("rgb", "rgba") if "rgb" in color else color + "14",
+                fillcolor=fill_color,
                 name="Price",
             ))
             fig.update_layout(
