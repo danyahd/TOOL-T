@@ -76,6 +76,40 @@ def get_ohlc(coin_id: str, days: int = 7) -> list:
         return []
 
 
+def get_trending() -> list:
+    try:
+        r = requests.get(
+            f"{COINGECKO_BASE}/search/trending",
+            headers=_headers(),
+            timeout=10,
+        )
+        r.raise_for_status()
+        coins = r.json().get("coins", [])
+        result = []
+        for entry in coins:
+            item = entry["item"]
+            data = item.get("data", {})
+            change_raw = data.get("price_change_percentage_24h", {})
+            change = change_raw.get("usd", 0) if isinstance(change_raw, dict) else 0
+            vol_str = data.get("total_volume", "$0").replace("$", "").replace(",", "")
+            mcap_str = data.get("market_cap", "$0").replace("$", "").replace(",", "")
+            result.append({
+                "id": item["id"],
+                "name": item["name"],
+                "symbol": item["symbol"].upper(),
+                "rank": item.get("market_cap_rank") or 9999,
+                "price": data.get("price", 0),
+                "change_24h": change,
+                "volume": float(vol_str) if vol_str else 0,
+                "market_cap": float(mcap_str) if mcap_str else 0,
+                "description": (data.get("content") or {}).get("description", ""),
+                "sparkline": data.get("sparkline", ""),
+            })
+        return result
+    except Exception:
+        return []
+
+
 def classify_trend(change_24h: float) -> tuple[str, str]:
     if change_24h >= 3:
         return "Uptrend", "✅"
