@@ -1,6 +1,12 @@
 import requests
+import streamlit as st
 
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
+
+
+def _headers() -> dict:
+    key = st.secrets.get("COINGECKO_API_KEY", "")
+    return {"x-cg-demo-api-key": key} if key else {}
 
 COINS = {
     "BTC": "bitcoin",
@@ -44,6 +50,7 @@ def get_prices() -> dict:
                 "include_24hr_change": "true",
                 "include_24hr_vol": "true",
             },
+            headers=_headers(),
             timeout=10,
         )
         r.raise_for_status()
@@ -57,6 +64,7 @@ def get_ohlc(coin_id: str, days: int = 7) -> list:
         r = requests.get(
             f"{COINGECKO_BASE}/coins/{coin_id}/ohlc",
             params={"vs_currency": "usd", "days": days},
+            headers=_headers(),
             timeout=10,
         )
         r.raise_for_status()
