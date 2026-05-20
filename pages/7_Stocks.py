@@ -2,7 +2,7 @@ import streamlit as st
 import yfinance as yf
 import plotly.graph_objects as go
 import pandas as pd
-from core.ai import analyze_coin
+from core.ai import analyze_stock
 
 st.set_page_config(page_title="Stocks", page_icon="📈", layout="wide")
 st.title("📈 Stocks & Indices")
@@ -169,20 +169,17 @@ for name, ticker in tickers.items():
         ai_key = f"stock_analysis_{ticker}"
         if groq_key:
             if st.button(f"🤖 Analyze {ticker}", key=f"btn_{ticker}"):
-                coin_like = {
-                    "id": ticker,
-                    "name": name,
-                    "symbol": ticker,
-                    "rank": 1,
-                    "price": q["price"],
-                    "change_24h": q["change_pct"],
-                    "volume": q["volume"],
-                    "market_cap": q["market_cap"],
-                    "description": f"{name} ({ticker}) is a publicly traded stock.",
-                }
                 with st.spinner(f"Analyzing {ticker}..."):
                     try:
-                        result = analyze_coin(groq_key, coin_like)
+                        result = analyze_stock(
+                            groq_key,
+                            ticker=ticker,
+                            name=name,
+                            price=q["price"],
+                            change_pct=q["change_pct"],
+                            market_cap=q["market_cap"],
+                            volume=q["volume"],
+                        )
                         st.session_state[ai_key] = result
                     except Exception as e:
                         msg = str(e)

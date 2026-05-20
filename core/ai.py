@@ -66,6 +66,52 @@ COACHING TIP: [One short discipline or mindset reminder]"""
     return _parse_response(raw)
 
 
+def analyze_stock(api_key: str, ticker: str, name: str, price: float, change_pct: float, market_cap: float, volume: float) -> dict:
+    """
+    Returns a dict with keys: verdict, reasoning, red_flag, suggestions, coaching_tip, raw
+    verdict is one of: BUY / WATCH / AVOID
+    """
+    mcap_fmt = f"${market_cap/1e12:.2f}T" if market_cap >= 1e12 else f"${market_cap/1e9:.1f}B" if market_cap >= 1e9 else "N/A"
+    vol_fmt = f"${volume/1e9:.2f}B" if volume >= 1e9 else f"${volume/1e6:.1f}M" if volume >= 1e6 else "N/A"
+
+    prompt = f"""Analyze this stock and give an honest investment assessment.
+
+STOCK: {name} ({ticker})
+Current price: ${price:,.2f}
+24h change: {change_pct:+.2f}%
+Market cap: {mcap_fmt}
+Avg volume: {vol_fmt}
+
+You are a stock market analyst. Give a direct, risk-aware assessment of whether this stock is worth buying, watching, or avoiding right now based on the data provided. Mention sector risks, valuation concerns, and momentum.
+
+Respond in EXACTLY this format, no extra text:
+
+VERDICT: [BUY or WATCH or AVOID]
+REASONING: [2-3 honest sentences about the stock's current position and potential]
+RED FLAG: [The single biggest risk or concern, or "None" if solid]
+SUGGESTIONS:
+- [Specific suggestion 1]
+- [Specific suggestion 2]
+- [Specific suggestion 3]
+COACHING TIP: [One short tip about investing in this type of stock]"""
+
+    client = Groq(api_key=api_key)
+    response = client.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "system", "content": "You are a stock market analyst who gives honest, risk-aware assessments. You never hype. You always mention risks and valuation concerns."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.4,
+        max_tokens=350,
+    )
+    raw = response.choices[0].message.content.strip()
+    result = _parse_response(raw)
+    remap = {"TRADE": "BUY", "WAIT": "WATCH", "SKIP": "AVOID"}
+    result["verdict"] = remap.get(result["verdict"], result["verdict"])
+    return result
+
+
 def analyze_coin(api_key: str, coin: dict) -> dict:
     """
     Returns a dict with keys: verdict, reasoning, red_flag, suggestions, coaching_tip, raw
